@@ -81,7 +81,8 @@ package org.messagepack.serialization
 		public static function rawBytesToHexString(bytes:ByteArray):String{
 			//To show hex value's of a byte array (doesnt add 0x)
 
-					var s:String=""; 
+			bytes.position = 0;
+			var s:String = ""; 
 					while (bytes.position < bytes.length)
 					{   
 						var n:String = bytes.readUnsignedByte().toString(16); 

@@ -53,6 +53,10 @@ package org.messagepack.serialization
 		public static function encode(input:*):ByteArray
 		{
 			var output:ByteArray = new ByteArray();
+            if(!input){
+                packNull(output);
+                return output;
+            }
 			var name:String = getQualifiedClassName(input);
 			var type:Class = getDefinitionByName(name) as Class;
 
@@ -81,11 +85,77 @@ package org.messagepack.serialization
 				case Array:
 					packArray(input, output);
 					break;
+                default:
+                    packObject(input, output)
+					break;
 			}
 			
 			return output;
 		}
 
+
+        private static function packObject(obj:Object, output:ByteArray):void
+        {
+            var count:int = 0;
+            for (var i:* in obj){
+               count++;
+                //trace(i+" :: "+obj[i]);
+            }
+//            trace("the count ", count);
+            if (count < 16) {
+                var arrShort:int = 0x80 | count;
+                output.writeByte(arrShort) ;
+            } else if (count < 65536) {
+                output.writeByte(0xde);
+                output.writeShort(count);
+            } else {
+                output.writeByte(0xdf);
+                output.writeUnsignedInt(count);
+            }
+            packObjectContent(obj, output);
+        }
+
+
+        private static function packObjectContent(obj:Object, output:ByteArray):void
+        {
+            for (var i:* in obj) {
+                var name:String = getQualifiedClassName(obj[i]);
+//                trace(name);
+                var type:Class = getDefinitionByName(name) as Class;
+//                trace(type);
+                packString(String(i), output);
+                switch(type) {
+                    case int:
+                    case uint:
+                        packInt(obj[i], output);
+                        break;
+                    case Number:
+                        packNumber(obj[i], output);
+                        break;
+                    case Boolean:
+                        packBoolean(obj[i], output);
+                        break;
+                    case null:
+                        packNull(output);
+                        break;
+                    case XML:
+                        packString(String(obj[i]), output);
+                        break;
+                    case String:
+                        packString(obj[i], output);
+                        break;
+                    case ByteArray:
+                        packByteArray(obj[i], output);
+                        break;
+                    case Array:
+                        packArray(obj[i], output);
+                        break;
+                    default:
+                        packObject(obj[i], output);
+                        break;
+                }
+            }
+        }
 		
 		private static function packArray(array:Array, output:ByteArray):void
 		{
@@ -112,6 +182,7 @@ package org.messagepack.serialization
 				
 				switch(type) {
 					case int:
+					case uint:
 						packInt(array[i], output);	
 						break;
 					case Boolean:
@@ -135,6 +206,9 @@ package org.messagepack.serialization
 					case Array:
 						packArray(array[i], output);
 						break;
+                    default:
+                        packObject(array[i], output);
+                        break;
 				}
 			}
 		}
